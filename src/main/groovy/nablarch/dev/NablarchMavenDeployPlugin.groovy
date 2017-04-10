@@ -132,36 +132,49 @@ class NablarchMavenDeployPlugin implements Plugin<Project> {
               javadoc.classpath += project.configurations.provided
           }
 
+          // For S3
+	  configurations {
+		  deployerJars
+	  }
+
+	  dependencies {
+		  deployerJars 'org.springframework.build:aws-maven:4.7.0.RELEASE'
+	  }
+
+
           signing {
               sign configurations.archives
           }
 
           signArchives.onlyIf { project.hasProperty('signing.keyId') }
-
+  
           uploadArchives {
               repositories {
                   mavenDeployer {
+			  
+		      configuration = configurations.deployerJars
+
                       beforeDeployment {
                           MavenDeployment deployment ->
                             if (project.hasProperty('signing.keyId')) {
                               signing.signPom(deployment)
                             }
-                      }
+                      }	
+			  
+		      repository(url: resolveRepoUrl(project)) {
+			      authentication(resolveCredentials(project))
+				      if (System.properties['https.proxyHost']) {
+					      proxy(host: System.properties['https.proxyHost'], port: System.properties['https.proxyPort'].toInteger(), type: "https")
+				      }
+		      }
 
-                      repository(url: resolveRepoUrl(project)) {
-                          authentication(userName: project.getOptional('nablarchRepoUsername'), password: project.getOptional('nablarchRepoPassword'))
-                          if (System.properties['https.proxyHost']) {
-                              proxy(host: System.properties['https.proxyHost'], port: System.properties['https.proxyPort'].toInteger(), type: "https")
-                          }
-                      }
-    
-                      snapshotRepository(url: resolveSnapshotRepoUrl(project)) {
-                          authentication(userName: project.getOptional('nablarchRepoUsername'), password: project.getOptional('nablarchRepoPassword'))
-                          if (System.properties['https.proxyHost']) {
-                              proxy(host: System.properties['https.proxyHost'], port: System.properties['https.proxyPort'].toInteger(), type: "https")
-                          }
-                      }
-    
+		      snapshotRepository(url: resolveSnapshotRepoUrl(project)) {
+			      authentication(resolveCredentials(project))
+				      if (System.properties['https.proxyHost']) {
+					      proxy(host: System.properties['https.proxyHost'], port: System.properties['https.proxyPort'].toInteger(), type: "https")
+				      }
+		      }
+
                       pom.project {
                           name project.name 
                           packaging 'jar'
@@ -247,5 +260,23 @@ class NablarchMavenDeployPlugin implements Plugin<Project> {
    */
   private static String resolveRepoName(Project project) {
     return project.getOrElse('nablarchRepoName', RC_REPO_NAME)
+  }
+	
+  /**
+   * デプロイ先URLに対応した認証情報を返します。
+   *
+   * @param project
+   * @return
+   */
+  private static Map resolveCredentials(Project project) {
+    def credentials=[]
+	  
+    if (resolveRepoUrl(project).startsWith("s3://")) {
+      credentials = [userName: project.getOptional('nablarchRepoUsername'), passphrase: project.getOptional('nablarchRepoPassword')]
+    } else { 
+       credentials = [userName: project.getOptional('nablarchRepoUsername'), password: project.getOptional('nablarchRepoPassword')]
+    }
+	  
+    return credentials
   }
 }

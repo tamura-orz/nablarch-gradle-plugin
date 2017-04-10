@@ -5,6 +5,8 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.JavaExec
 import org.apache.tools.ant.taskdefs.condition.Os
+import org.gradle.api.credentials.AwsCredentials
+import com.amazonaws.auth.AWSCredentials
 
 /**
  * Nablarchのビルドを行うためのプラグイン。
@@ -159,7 +161,26 @@ class NablarchBuildPlugin implements Plugin<Project> {
     project.with {
       repositories {
         mavenLocal()
-        maven { url resolveRepoUrl(project)}
+
+        maven { 
+          url resolveRepoUrl(project)
+
+	  if (project.getOptional('useRepoCredentials')) {
+            if (resolveRepoUrl(project).startsWith("s3://")) {
+              credentials(AwsCredentials) {
+                accessKey project.getOptional('nablarchRepoUsername')
+                secretKey project.getOptional('nablarchRepoPassword')
+              }
+            } else {
+              credentials {
+                username project.getOptional('nablarchRepoUsername')
+                password project.getOptional('nablarchRepoPassword')
+              }
+	    }
+	  }
+
+        }
+
         jcenter()
       }
     }
