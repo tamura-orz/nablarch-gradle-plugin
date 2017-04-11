@@ -159,7 +159,15 @@ class NablarchBuildPlugin implements Plugin<Project> {
     project.with {
       repositories {
         mavenLocal()
-        maven { url resolveRepoUrl(project)}
+        maven { 
+          url resolveRepoUrl(project)
+          if (resolveRepoUrl(project).startsWith("s3://")) {
+            credentials(AwsCredentials) {
+              accessKey "project.getOptional('nablarchRepoUsername')"
+              secretKey "project.getOptional('nablarchRepoPassword')"
+            }
+          }
+        }
         jcenter()
       }
     }
@@ -188,4 +196,5 @@ class NablarchBuildPlugin implements Plugin<Project> {
     }
     return project.getOrElse('nablarchRepoReferenceName', STAGING_REPO_NAME)
   }
+  
 }
