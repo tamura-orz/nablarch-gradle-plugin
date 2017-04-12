@@ -21,9 +21,6 @@ repositories {
 dependencies {
   compile gradleApi()
   compile localGroovy()
-  
-  compile 'com.amazonaws:aws-java-sdk-sts:1.11.93'
-  
   testCompile('org.spockframework:spock-core:0.7-groovy-2.0') {
     exclude group:'*', module: 'groovy-all'
   }
